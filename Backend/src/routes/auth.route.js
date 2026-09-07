@@ -1,16 +1,28 @@
-const express = require("express");
-const router = express.Router();
+import express from "express";
+import * as authController from "../controllers/auth.controller.js";
 
-router.post("/login", (req, res) =>{
-    res.send("login endpoint");
-})
+const authRouter = express.Router();
 
-router.post("/register", (req, res) =>{
-    res.send("register endpoint");
-})
+/**
+ * POST /api/auth/register
+ * @summary Register a new user
+ * @tags Authentication
+ */
+authRouter.post("/register", authController.register);
 
-router.post("/logout", (req, res) =>{
-    res.send("logout endpoint");
-})
+/**
+ * GET /api/auth/get-me
+ * @summary Get the current user's information
+ * @tags Authentication
+ */
+authRouter.get("/get-me", authController.getMe);
 
-module.exports = router;
+/**
+ * GET /api/auth/refresh-token
+ * @summary generate new access token using refresh token
+ * @tags Authentication
+ */
+authRouter.get("/refresh-token", authController.refreshToken);
+
+
+export default authRouter;

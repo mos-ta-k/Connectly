@@ -1,14 +1,15 @@
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer";
+import config from "../configs/config.js";
 
 // communicate with SMTP server
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     type: "OAuth2",
-    user: process.env.EMAIL_USER,
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
+    user: config.EMAIL_USER,
+    clientId: config.CLIENT_ID,
+    clientSecret: config.CLIENT_SECRET,
+    refreshToken: config.REFRESH_TOKEN,
   },
 });
 
@@ -23,30 +24,30 @@ transporter.verify((error, success) => {
 
 //send email
 const sendEmail = async (to, subject, text, html) => {
-    try{
-        const info = await transporter.sendMail({
-            from: `"Connectly" <${process.env.EMAIL_USER}>`,
-            to,
-            subject, 
-            text, 
-            html
-        });
+  try {
+    const info = await transporter.sendMail({
+      from: `"Connectly" <${config.EMAIL_USER}>`,
+      to,
+      subject,
+      text,
+      html,
+    });
 
-        console.log("Message sent: %s", info.messageId);
-        console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-
-    } catch (error) {
-        console.error("Error sending email:", error);
-    }
+    console.log("Message sent: %s", info.messageId);
+    console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+  } catch (error) {
+    console.error("Error sending email:", error);
+  }
 };
 
-async function sendRegisterEmail(userEmail, name){
-    const subject = "Welcome to Connectly!";
-    const text = `Hello ${name},\n\nThank you for registering with Connectly! We're excited to have you on board.\n\nBest regards,\nThe Connectly Team`;
-    const html = `<p>Hello ${name},</p>
+async function sendRegisterEmail(userEmail, name) {
+  const subject = "Welcome to Connectly!";
+  const text = `Hello ${name},\n\nThank you for registering with Connectly! We're excited to have you on board.\n\nBest regards,\nThe Connectly Team`;
+  const html = `<p>Hello ${name},</p>
                   <p>Thank you for registering with Connectly! We're excited to have you on board.</p>
                   <p>Best regards,<br>The Connectly Team</p>`;
-    await sendEmail(userEmail, subject, text, html);
+  await sendEmail(userEmail, subject, text, html);
 }
 
-module.exports = { sendEmail, sendRegisterEmail };
+export { sendEmail, sendRegisterEmail };
+

@@ -1,15 +1,10 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+import config from "./config.js";
 
 let connectionPromise;
 
 function getDatabaseUri() {
-  const uri = process.env.MONGODB_URI || process.env.DATABASE_URL;
-
-  if (!uri) {
-    throw new Error("MONGODB_URI or DATABASE_URL must be set");
-  }
-
-  return uri;
+  return config.MONGODB_URI;
 }
 
 function configureConnectionLogging() {
@@ -44,22 +39,13 @@ async function connectDatabase() {
   if (!connectionPromise) {
     connectionPromise = mongoose
       .connect(getDatabaseUri(), {
+        dbName: config.MONGODB_DATABASE,
         serverSelectionTimeoutMS: Number.parseInt(
-          process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || "5000",
-          10,
+          config.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
         ),
-        maxPoolSize: Number.parseInt(
-          process.env.MONGODB_MAX_POOL_SIZE || "10",
-          10,
-        ),
-        minPoolSize: Number.parseInt(
-          process.env.MONGODB_MIN_POOL_SIZE || "0",
-          10,
-        ),
-        socketTimeoutMS: Number.parseInt(
-          process.env.MONGODB_SOCKET_TIMEOUT_MS || "45000",
-          10,
-        ),
+        maxPoolSize: Number.parseInt(config.MONGODB_MAX_POOL_SIZE),
+        minPoolSize: Number.parseInt(config.MONGODB_MIN_POOL_SIZE),
+        socketTimeoutMS: Number.parseInt(config.MONGODB_SOCKET_TIMEOUT_MS),
       })
       .then(() => mongoose.connection)
       .catch((error) => {
@@ -85,4 +71,5 @@ function isDatabaseReady() {
   return mongoose.connection.readyState === mongoose.ConnectionStates.connected;
 }
 
-module.exports = { connectDatabase, disconnectDatabase, isDatabaseReady };
+export { connectDatabase, disconnectDatabase, isDatabaseReady };
+
