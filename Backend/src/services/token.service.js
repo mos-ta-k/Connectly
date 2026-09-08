@@ -1,12 +1,14 @@
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import config from "../configs/config.js";
+import Session from "../models/session.model.js";
 
-export function generateAccessToken(userId) {
+export function generateAccessToken(userId, sessionId) {
   return jwt.sign(
     {
       id: userId,
       tokenType: "access",
+      ...(sessionId ? { sessionId } : {}),
     },
     config.JWT_SECRET,
     {

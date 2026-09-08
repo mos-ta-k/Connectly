@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import config from "../configs/config.js";
 import User from "../models/user.model.js";
@@ -6,6 +7,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../services/token.service.js";
+import Session from "../models/session.model.js";
 
 export async function register(req, res) {
   const username = req.body?.username?.trim();
@@ -59,8 +61,19 @@ export async function register(req, res) {
     passwordHash,
   });
 
-  const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
+  const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+  // create session 
+  const session = await Session.create({
+    user: user._id,
+    refreshToken: refreshTokenHash,
+    ip: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
+
+  const accessToken = generateAccessToken(user._id, session._id);
+
 
   // set refresh token in httpOnly cookie
   res.cookie("refreshToken", refreshToken, {
@@ -82,17 +95,42 @@ export async function register(req, res) {
 
 // identify current user from jwt token
 export async function getMe(req, res) {
-  const token = req.headers.authorization?.split(" ")[1];
+  const authorization = req.headers.authorization;
+  const [scheme, token] = authorization?.trim().split(/\s+/) ?? [];
 
-  if (!token) {
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
     return res.status(401).json({
-      message: "Token is not found!",
+      message: "A Bearer access token is required.",
     });
   }
 
-  const decoded = jwt.verify(token, config.JWT_SECRET);
+  let decoded;
+
+  try {
+    decoded = jwt.verify(token, config.JWT_SECRET);
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        message: "The access token is invalid or expired.",
+      });
+    }
+
+    throw error;
+  }
+
+  if (typeof decoded !== "object" || decoded.tokenType !== "access" || !decoded.id) {
+    return res.status(401).json({
+      message: "The access token is invalid.",
+    });
+  }
 
   const user = await User.findById(decoded.id);
+
+  if (!user) {
+    return res.status(401).json({
+      message: "The user associated with this token was not found.",
+    });
+  }
 
   res.status(200).json({
     message: "User fetched successfully.",
