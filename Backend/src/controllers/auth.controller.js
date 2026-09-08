@@ -112,6 +112,13 @@ export async function login(req, res) {
   }
 
   const user = await User.findOne({ email }).select("+passwordHash");
+
+  if (!user) {
+    return res.status(401).json({
+      message: "Invalid email of password",
+    });
+  }
+
   const passwordMatches = user
     ? await bcrypt.compare(password, user.passwordHash)
     : false;
@@ -333,8 +340,30 @@ export async function logout(req, res) {
 
 /** logout from all devices  */
 
-export async function logoutAll(req, res){
+export async function logoutAll(req, res) {
+  const refreshToken = req.cookies?.refreshToken;
 
-  
+  if (!refreshToken) {
+    return res.status(400).json({
+      message: "Refresh Token is not found",
+    });
+  }
 
+  const decoded = jwt.verify(refreshToken, JWT_SECRET);
+
+  await Session.updateMany(
+    {
+      user: decoded.id,
+      revoked: true,
+    },
+    {
+      revoked: true,
+    },
+  );
+
+  res.clearCookie("refreshToken");
+
+  res.status(200).json({
+    message: "Logged out from all devices successfully.",
+  });
 }
