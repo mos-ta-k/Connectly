@@ -45,6 +45,14 @@ authRouter.get("/logout", authController.logout);
 */
 authRouter.get("/logout-all", authController.logoutAll);
 
+/** 
+ * POST /api/auth/verify-email
+ * @summary Verify email
+ * @tags Authentication
+*/ 
+authRouter.post("/verify-email", authController.verifyEmail);
+
+
 
 
 

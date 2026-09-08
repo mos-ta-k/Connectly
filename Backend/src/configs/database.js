@@ -57,6 +57,16 @@ async function connectDatabase() {
   return connectionPromise;
 }
 
+connectDatabase().catch((error) => {
+  console.error(
+    JSON.stringify({
+      level: "error",
+      message: "MongoDB connection failed; API is running in degraded mode",
+      error: error.message,
+    }),
+  );
+});
+
 async function disconnectDatabase() {
   connectionPromise = undefined;
 

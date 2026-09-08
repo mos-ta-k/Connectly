@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    verified: {
+      type: Boolean,
+      default: false
+    },
     avatarUrl: {
       type: String,
       trim: true,
@@ -52,6 +56,7 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    
   },
   {
     timestamps: true,
