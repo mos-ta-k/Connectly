@@ -217,45 +217,8 @@ export async function login(req, res) {
   });
 }
 
-// identify current user from jwt token
 export async function getMe(req, res) {
-  const authorization = req.headers.authorization;
-  const [scheme, token] = authorization?.trim().split(/\s+/) ?? [];
-
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
-    return res.status(401).json({
-      message: "A Bearer access token is required.",
-    });
-  }
-
-  let decoded;
-
-  try {
-    decoded = jwt.verify(token, config.JWT_SECRET);
-  } catch (error) {
-    if (
-      error instanceof jwt.JsonWebTokenError ||
-      error instanceof jwt.TokenExpiredError
-    ) {
-      return res.status(401).json({
-        message: "The access token is invalid or expired.",
-      });
-    }
-
-    throw error;
-  }
-
-  if (
-    typeof decoded !== "object" ||
-    decoded.tokenType !== "access" ||
-    !decoded.id
-  ) {
-    return res.status(401).json({
-      message: "The access token is invalid.",
-    });
-  }
-
-  const user = await User.findById(decoded.id);
+  const user = await User.findById(req.user.id);
 
   if (!user) {
     return res.status(401).json({
@@ -474,6 +437,97 @@ export async function verifyEmail(req, res){
       username: user.username,
     },
   })
-  
-  
+}
+
+/**
+ * Change password for logged-in user
+ */
+export async function changePassword(req, res) {
+  const { oldPassword, newPassword } = req.body || {};
+  const userId = req.user?.id;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({
+      error: {
+        message: "Current password and new password are required.",
+      },
+    });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      error: {
+        message: "New password must be at least 8 characters.",
+      },
+    });
+  }
+
+  const user = await User.findById(userId).select("+passwordHash");
+  if (!user) {
+    return res.status(404).json({
+      error: {
+        message: "User not found.",
+      },
+    });
+  }
+
+  const matches = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!matches) {
+    return res.status(400).json({
+      error: {
+        message: "Current password is incorrect.",
+      },
+    });
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  await user.save();
+
+  return res.status(200).json({
+    message: "Password changed successfully.",
+  });
+}
+
+/**
+ * Reset password using OTP (forgot password flow)
+ */
+export async function resetPassword(req, res) {
+  const email = req.body?.email?.trim().toLowerCase();
+  const otp = req.body?.otp;
+  const newPassword = req.body?.newPassword;
+
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({
+      error: {
+        message: "Email, OTP, and new password are required.",
+      },
+    });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      error: {
+        message: "New password must be at least 8 characters.",
+      },
+    });
+  }
+
+  const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+  const otpDoc = await otpModel.findOne({ email, otpHash });
+
+  if (!otpDoc) {
+    return res.status(400).json({
+      error: {
+        message: "Invalid or expired OTP.",
+      },
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await User.findByIdAndUpdate(otpDoc.user, { passwordHash });
+  await otpModel.deleteMany({ email, user: otpDoc.user });
+
+  return res.status(200).json({
+    message: "Password has been reset successfully.",
+  });
 }

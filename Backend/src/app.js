@@ -1,7 +1,8 @@
+import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import crypto from "node:crypto";
 import authRoutes from "./routes/auth.route.js";
-import cookieParser from "cookie-parser";
+import userRoutes from "./routes/user.route.js";
 
 import cors from "cors";
 import express from "express";
@@ -77,6 +78,7 @@ function createApp() {
   });
 
   app.use("/api/auth", authRoutes);
+  app.use("/api/users", userRoutes);
 
   app.use((request, response) => {
     response.status(404).json({
