@@ -13,6 +13,7 @@ import otpModel from "../models/otp.model.js";
 import {
   sendEmail,
   sendOTPEmail,
+  sendPasswordResetEmail,
   sendRegisterEmail,
 } from "../services/email.service.js";
 
@@ -97,6 +98,49 @@ export async function register(req, res) {
       username: user.username,
       verified: user.verified
     },
+  });
+}
+
+/** Request a password reset OTP. */
+export async function forgotPassword(req, res) {
+  const email = req.body?.email?.trim().toLowerCase();
+
+  if (!email) {
+    return res.status(400).json({
+      error: {
+        message: "Email is required.",
+      },
+    });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      error: {
+        message: "Please provide a valid email address.",
+      },
+    });
+  }
+
+  const user = await User.findOne({ email });
+
+  if (user) {
+    const otp = generateOTP();
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+
+    await otpModel.deleteMany({ email, user: user._id });
+    await otpModel.create({
+      email,
+      otpHash,
+      user: user._id,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    await sendPasswordResetEmail(email, otp, user.username);
+  }
+
+  return res.status(200).json({
+    message: "If an account exists for that email, a password reset code has been sent.",
   });
 }
 

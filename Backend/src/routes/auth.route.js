@@ -11,6 +11,13 @@ const authRouter = express.Router();
 authRouter.post("/register", authController.register);
 
 /**
+ * POST /api/auth/forgot-password
+ * @summary Send a password reset OTP
+ * @tags Authentication
+ */
+authRouter.post("/forgot-password", authController.forgotPassword);
+
+/**
  * POST /api/auth/login
  * @summary Authenticate an existing user
  * @tags Authenticat ion
